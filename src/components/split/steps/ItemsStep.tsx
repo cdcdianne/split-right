@@ -10,7 +10,7 @@ import { ReceiptItem, CURRENCIES } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export function ItemsStep() {
-  const { data, addItem, updateItem, removeItem, addItems, setCurrency, setCurrentStep } = useSplit();
+  const { data, addItem, updateItem, removeItem, addItems, setCurrency, setStoreName, setDateTime, setCurrentStep } = useSplit();
   const [itemName, setItemName] = useState('');
   const [itemPrice, setItemPrice] = useState('');
   const [itemQty, setItemQty] = useState('1');
@@ -57,6 +57,16 @@ export function ItemsStep() {
         // Auto-detect and set currency if detected
         if (result.detectedCurrency) {
           setCurrency(result.detectedCurrency);
+        }
+        
+        // Auto-detect and set store name if detected
+        if (result.storeName) {
+          setStoreName(result.storeName);
+        }
+        
+        // Auto-detect and set date/time if detected
+        if (result.dateTime) {
+          setDateTime(result.dateTime);
         }
       } else {
         setDraftItems([]);

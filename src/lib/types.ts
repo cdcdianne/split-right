@@ -12,6 +12,17 @@ export interface ReceiptItem {
   assignedTo: string[]; // Person IDs
 }
 
+export type PaymentMethod = 'bank' | 'venmo' | 'paypal' | 'custom';
+
+export interface PaymentInfo {
+  method: PaymentMethod | null;
+  bankAccountNumber?: string;
+  venmoHandle?: string;
+  paypalInfo?: string;
+  customMethod?: string;
+  customDetails?: string;
+}
+
 export interface SplitData {
   people: Person[];
   items: ReceiptItem[];
@@ -21,6 +32,9 @@ export interface SplitData {
   taxTipSplitMode: 'proportional' | 'equal';
   roundingMode: 'exact' | 'whole' | 'five' | 'ten';
   currency: string;
+  paymentInfo: PaymentInfo;
+  storeName?: string;
+  dateTime?: string; // ISO date string or user-entered date/time
 }
 
 export type SplitStep = 

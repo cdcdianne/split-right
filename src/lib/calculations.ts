@@ -112,6 +112,17 @@ export function generateShareableText(data: SplitData, showDetails: boolean = fa
   const peopleCount = data.people.length || 1;
   const lines: string[] = ['📝 SplitRight Receipt', ''];
   
+  // Add store name and date/time if available
+  if (data.storeName || data.dateTime) {
+    if (data.storeName) {
+      lines.push(`Store: ${data.storeName}`);
+    }
+    if (data.dateTime) {
+      lines.push(`Date/Time: ${data.dateTime}`);
+    }
+    lines.push('');
+  }
+  
   data.people.forEach(person => {
     const share = shares.get(person.id) || 0;
     lines.push(`${person.name}: ${formatCurrency(share, data.currency)}`);
@@ -145,6 +156,42 @@ export function generateShareableText(data: SplitData, showDetails: boolean = fa
   
   if (!showDetails) lines.push('');
   lines.push(`Total: ${formatCurrency(total, data.currency)}`);
+  
+  // Add payment information if available
+  if (data.paymentInfo?.method) {
+    lines.push('');
+    lines.push('---');
+    lines.push('Payment Method:');
+    
+    switch (data.paymentInfo.method) {
+      case 'bank':
+        if (data.paymentInfo.bankAccountNumber) {
+          lines.push(`Bank Transfer`);
+          lines.push(`Account Number: ${data.paymentInfo.bankAccountNumber}`);
+        }
+        break;
+      case 'venmo':
+        if (data.paymentInfo.venmoHandle) {
+          lines.push(`Venmo: @${data.paymentInfo.venmoHandle}`);
+        }
+        break;
+      case 'paypal':
+        if (data.paymentInfo.paypalInfo) {
+          lines.push(`PayPal: ${data.paymentInfo.paypalInfo}`);
+        }
+        break;
+      case 'custom':
+        if (data.paymentInfo.customMethod) {
+          lines.push(`${data.paymentInfo.customMethod}`);
+          if (data.paymentInfo.customDetails) {
+            lines.push(data.paymentInfo.customDetails);
+          }
+        }
+        break;
+    }
+    
+    lines.push('---');
+  }
   
   return lines.join('\n');
 }

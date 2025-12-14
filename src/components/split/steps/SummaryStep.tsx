@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useSplit } from '@/context/SplitContext';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { calculateFinalShares, calculateTotal, calculatePersonSubtotal, calculateTip, formatCurrency } from '@/lib/calculations';
 
 export function SummaryStep() {
-  const { data, setCurrentStep } = useSplit();
+  const { data, setCurrentStep, setStoreName, setDateTime } = useSplit();
+  const [isEditing, setIsEditing] = useState(false);
 
   const shares = calculateFinalShares(data);
   const total = calculateTotal(data);
@@ -22,6 +26,64 @@ export function SummaryStep() {
       <div className="text-center space-y-2">
         <h2 className="text-2xl sm:text-3xl font-bold">Summary</h2>
         <p className="text-muted-foreground text-sm sm:text-base">Here's what everyone owes</p>
+      </div>
+
+      {/* Store Name and Date/Time */}
+      <div className="p-4 sm:p-5 rounded-xl bg-card shadow-medium space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-muted-foreground">Receipt Information</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsEditing(!isEditing)}
+            className="h-8 text-xs"
+          >
+            {isEditing ? 'Done' : 'Edit'}
+          </Button>
+        </div>
+        
+        {isEditing ? (
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="store-name" className="text-xs">Store Name</Label>
+              <Input
+                id="store-name"
+                value={data.storeName || ''}
+                onChange={(e) => setStoreName(e.target.value)}
+                placeholder="Enter store name"
+                className="h-9 text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="date-time" className="text-xs">Date & Time</Label>
+              <Input
+                id="date-time"
+                value={data.dateTime || ''}
+                onChange={(e) => setDateTime(e.target.value)}
+                placeholder="e.g., 2024-01-15 14:30 or 01/15/2024 2:30 PM"
+                className="h-9 text-sm"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {data.storeName && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Store:</span>
+                <span className="text-sm font-medium">{data.storeName}</span>
+              </div>
+            )}
+            {data.dateTime && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Date/Time:</span>
+                <span className="text-sm font-medium">{data.dateTime}</span>
+              </div>
+            )}
+            {!data.storeName && !data.dateTime && (
+              <p className="text-xs text-muted-foreground italic">No receipt information. Click Edit to add.</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Person Summaries */}

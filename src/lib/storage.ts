@@ -42,6 +42,7 @@ export function getDefaultSplitData(): SplitData {
     taxTipSplitMode: 'proportional',
     roundingMode: 'exact',
     currency: '¥',
+    paymentInfo: { method: null },
   };
 }
 
@@ -62,8 +63,8 @@ export function saveToHistory(data: SplitData): string {
     // Add to beginning of array (most recent first)
     history.unshift(entry);
     
-    // Keep only last 50 entries to prevent storage bloat
-    const trimmedHistory = history.slice(0, 50);
+    // Keep only last 5 entries to prevent storage bloat
+    const trimmedHistory = history.slice(0, 5);
     
     localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmedHistory));
     return entry.id;
@@ -88,6 +89,40 @@ export function getHistory(): HistoryEntry[] {
 export function getHistoryEntry(id: string): HistoryEntry | null {
   const history = getHistory();
   return history.find(entry => entry.id === id) || null;
+}
+
+export function updateHistoryEntry(id: string, data: SplitData): void {
+  try {
+    const history = getHistory();
+    const total = calculateTotal(data);
+    const updated = history.map(entry => 
+      entry.id === id 
+        ? {
+            ...entry,
+            data: { ...data },
+            total,
+            peopleCount: data.people.length,
+            itemsCount: data.items.length,
+          }
+        : entry
+    );
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+  } catch (error) {
+    console.error('Failed to update history entry:', error);
+  }
+}
+
+export function updateMostRecentHistoryEntry(data: SplitData): void {
+  try {
+    const history = getHistory();
+    if (history.length > 0) {
+      // Update the most recent entry (first in array)
+      const mostRecent = history[0];
+      updateHistoryEntry(mostRecent.id, data);
+    }
+  } catch (error) {
+    console.error('Failed to update most recent history entry:', error);
+  }
 }
 
 export function deleteHistoryEntry(id: string): void {

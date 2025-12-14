@@ -10,6 +10,8 @@ interface OCRProgress {
 export interface ExtractReceiptResult {
   items: ReceiptItem[];
   detectedCurrency?: string;
+  storeName?: string;
+  dateTime?: string;
 }
 
 export async function extractReceiptItems(
@@ -29,8 +31,10 @@ export async function extractReceiptItems(
 
   const items = parseReceiptText(result.data.text);
   const detectedCurrency = detectCurrency(result.data.text);
+  const storeName = extractStoreName(result.data.text);
+  const dateTime = extractDateTime(result.data.text);
   
-  return { items, detectedCurrency };
+  return { items, detectedCurrency, storeName, dateTime };
 }
 
 function detectCurrency(text: string): string | undefined {
@@ -157,4 +161,122 @@ function cleanItemName(name: string): string {
     .replace(/\s+/g, ' ')
     .trim()
     .substring(0, 40);
+}
+
+function extractStoreName(text: string): string | undefined {
+  const lines = text.split('\n').filter(line => line.trim());
+  
+  // Store name is usually in the first few lines, often the first or second line
+  // Look for lines that:
+  // - Are not too long (store names are usually short)
+  // - Don't contain prices
+  // - Don't contain common receipt keywords
+  // - Are not dates
+  
+  for (let i = 0; i < Math.min(5, lines.length); i++) {
+    const line = lines[i].trim();
+    
+    // Skip if it looks like a date, price, or common receipt header
+    if (
+      /^\d{1,2}[\/\-]\d{1,2}/.test(line) || // Date pattern
+      /[¥￥$€£₩₱฿]\s*\d/.test(line) || // Price pattern
+      /^(subtotal|total|tax|tip|receipt|date|time|thank|ありがとう)/i.test(line) ||
+      line.length > 50 || // Too long for a store name
+      line.length < 2 // Too short
+    ) {
+      continue;
+    }
+    
+    // If it looks like a store name (has letters, reasonable length)
+    if (/[a-zA-Z\u3040-\u30ff\u4e00-\u9faf]/.test(line) && line.length >= 2 && line.length <= 50) {
+      return line.substring(0, 50);
+    }
+  }
+  
+  return undefined;
+}
+
+function extractDateTime(text: string): string | undefined {
+  const lines = text.split('\n').filter(line => line.trim());
+  
+  // Common date/time patterns
+  const datePatterns = [
+    // MM/DD/YYYY or DD/MM/YYYY
+    /\b(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/,
+    // YYYY/MM/DD
+    /\b(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})\b/,
+    // Japanese date format: YYYY年MM月DD日
+    /\b(\d{4})年(\d{1,2})月(\d{1,2})日\b/,
+  ];
+  
+  const timePatterns = [
+    // HH:MM or HH:MM:SS (12 or 24 hour)
+    /\b(\d{1,2}:\d{2}(?::\d{2})?(?:\s*(?:AM|PM|午前|午後))?)\b/i,
+  ];
+  
+  // Look through first 10 lines for date/time
+  for (let i = 0; i < Math.min(10, lines.length); i++) {
+    const line = lines[i].trim();
+    
+    // Try to find date
+    for (const pattern of datePatterns) {
+      const dateMatch = line.match(pattern);
+      if (dateMatch) {
+        let dateStr = dateMatch[0];
+        
+        // Handle Japanese date format
+        if (line.includes('年') && line.includes('月') && line.includes('日')) {
+          const jpMatch = line.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+          if (jpMatch) {
+            dateStr = `${jpMatch[1]}-${jpMatch[2].padStart(2, '0')}-${jpMatch[3].padStart(2, '0')}`;
+          }
+        }
+        
+        // Try to find time on same line or nearby
+        let timeStr = '';
+        for (const timePattern of timePatterns) {
+          const timeMatch = line.match(timePattern);
+          if (timeMatch) {
+            timeStr = timeMatch[1];
+            break;
+          }
+        }
+        
+        // If no time on same line, check next line
+        if (!timeStr && i + 1 < lines.length) {
+          for (const timePattern of timePatterns) {
+            const timeMatch = lines[i + 1].match(timePattern);
+            if (timeMatch) {
+              timeStr = timeMatch[1];
+              break;
+            }
+          }
+        }
+        
+        return timeStr ? `${dateStr} ${timeStr}` : dateStr;
+      }
+    }
+    
+    // Try to find time only
+    for (const timePattern of timePatterns) {
+      const timeMatch = line.match(timePattern);
+      if (timeMatch) {
+        // If we find time, try to find date nearby
+        let dateStr = '';
+        for (let j = Math.max(0, i - 2); j <= Math.min(lines.length - 1, i + 2); j++) {
+          for (const datePattern of datePatterns) {
+            const dateMatch = lines[j].match(datePattern);
+            if (dateMatch) {
+              dateStr = dateMatch[0];
+              break;
+            }
+          }
+          if (dateStr) break;
+        }
+        return dateStr ? `${dateStr} ${timeMatch[1]}` : timeMatch[1];
+      }
+    }
+  }
+  
+  return undefined;
 }

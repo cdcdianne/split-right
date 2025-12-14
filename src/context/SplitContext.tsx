@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { SplitData, SplitStep, Person, ReceiptItem, PERSON_COLORS } from '@/lib/types';
+import { SplitData, SplitStep, Person, ReceiptItem, PERSON_COLORS, PaymentMethod, PaymentInfo } from '@/lib/types';
 import { saveSplitData, loadSplitData, clearSplitData, getDefaultSplitData } from '@/lib/storage';
 import { generateId } from '@/lib/calculations';
 
@@ -35,6 +35,14 @@ interface SplitContextType {
   // Currency
   setCurrency: (currency: string) => void;
   
+  // Payment
+  setPaymentMethod: (method: PaymentMethod | null) => void;
+  setPaymentDetails: (field: keyof PaymentInfo, value: string) => void;
+  
+  // Receipt metadata
+  setStoreName: (name: string) => void;
+  setDateTime: (dateTime: string) => void;
+  
   // Reset
   resetSplit: () => void;
 }
@@ -51,6 +59,10 @@ export function SplitProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const saved = loadSplitData();
     if (saved) {
+      // Ensure paymentInfo exists for backward compatibility
+      if (!saved.paymentInfo) {
+        saved.paymentInfo = { method: null };
+      }
       setData(saved);
     }
     setInitialized(true);
@@ -166,6 +178,46 @@ export function SplitProvider({ children }: { children: React.ReactNode }) {
     setData(prev => ({ ...prev, currency }));
   }, []);
 
+  const setPaymentMethod = useCallback((method: PaymentMethod | null) => {
+    setData(prev => ({
+      ...prev,
+      paymentInfo: {
+        ...prev.paymentInfo,
+        method,
+        // Clear other fields when method changes
+        bankAccountNumber: method === 'bank' ? prev.paymentInfo.bankAccountNumber : undefined,
+        venmoHandle: method === 'venmo' ? prev.paymentInfo.venmoHandle : undefined,
+        paypalInfo: method === 'paypal' ? prev.paymentInfo.paypalInfo : undefined,
+        customMethod: method === 'custom' ? prev.paymentInfo.customMethod : undefined,
+        customDetails: method === 'custom' ? prev.paymentInfo.customDetails : undefined,
+      },
+    }));
+  }, []);
+
+  const setPaymentDetails = useCallback((field: keyof PaymentInfo, value: string) => {
+    setData(prev => ({
+      ...prev,
+      paymentInfo: {
+        ...prev.paymentInfo,
+        [field]: value || undefined,
+      },
+    }));
+  }, []);
+
+  const setStoreName = useCallback((name: string) => {
+    setData(prev => ({
+      ...prev,
+      storeName: name.trim() || undefined,
+    }));
+  }, []);
+
+  const setDateTime = useCallback((dateTime: string) => {
+    setData(prev => ({
+      ...prev,
+      dateTime: dateTime.trim() || undefined,
+    }));
+  }, []);
+
   const handleSetCurrentStep = useCallback((step: SplitStep) => {
     setCurrentStep(step);
     setVisitedSteps(prev => new Set([...prev, step]));
@@ -199,6 +251,10 @@ export function SplitProvider({ children }: { children: React.ReactNode }) {
         setTaxTipSplitMode,
         setRoundingMode,
         setCurrency,
+        setPaymentMethod,
+        setPaymentDetails,
+        setStoreName,
+        setDateTime,
         resetSplit,
       }}
     >

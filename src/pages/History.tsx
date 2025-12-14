@@ -48,7 +48,15 @@ export default function History() {
     setLoading(true);
     try {
       const entries = getHistory();
-      setHistory(entries);
+      // Ensure paymentInfo exists for backward compatibility
+      const normalizedEntries = entries.map(entry => ({
+        ...entry,
+        data: {
+          ...entry.data,
+          paymentInfo: entry.data.paymentInfo || { method: null },
+        },
+      }));
+      setHistory(normalizedEntries);
     } catch (error) {
       toast({
         title: 'Failed to load history',
@@ -138,6 +146,10 @@ export default function History() {
   };
 
   const handleViewDetails = (entry: HistoryEntry) => {
+    // Ensure paymentInfo exists for backward compatibility
+    if (!entry.data.paymentInfo) {
+      entry.data.paymentInfo = { method: null };
+    }
     setSelectedEntry(entry);
     setShowDetails(false);
     setCopied(false);
@@ -375,7 +387,7 @@ export default function History() {
                 {/* Shareable Card */}
                 <div
                   ref={cardRef}
-                  className="p-6 rounded-2xl bg-card shadow-medium space-y-4"
+                  className="px-6 pt-6 pb-10 rounded-2xl bg-card shadow-medium space-y-4"
                 >
                   <div className="text-center pb-3 border-b border-border">
                     <h3 className="text-xl font-bold gradient-primary bg-clip-text text-white">
@@ -383,6 +395,22 @@ export default function History() {
                     </h3>
                     <p className="text-sm text-muted-foreground">Receipt Split</p>
                   </div>
+
+                  {/* Store Name and Date/Time */}
+                  {(selectedEntry.data.storeName || selectedEntry.data.dateTime) && (
+                    <div className="pb-3 border-b border-border space-y-1">
+                      {selectedEntry.data.storeName && (
+                        <div className="text-center">
+                          <p className="text-sm font-semibold">{selectedEntry.data.storeName}</p>
+                        </div>
+                      )}
+                      {selectedEntry.data.dateTime && (
+                        <div className="text-center">
+                          <p className="text-xs text-muted-foreground">{selectedEntry.data.dateTime}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="space-y-3">
                     {selectedEntry.data.people.map(person => {
@@ -470,6 +498,39 @@ export default function History() {
                       {formatCurrency(selectedEntry.total, selectedEntry.data.currency)}
                     </span>
                   </div>
+
+                  {/* Payment Information */}
+                  {selectedEntry.data.paymentInfo && selectedEntry.data.paymentInfo.method && (
+                    <div className="pt-3 border-t border-border space-y-2">
+                      <div className="text-sm font-medium text-muted-foreground">Payment Method</div>
+                      <div className="text-sm">
+                        {selectedEntry.data.paymentInfo.method === 'bank' && selectedEntry.data.paymentInfo.bankAccountNumber && (
+                          <div>
+                            <div className="font-medium">Bank Transfer</div>
+                            <div className="text-muted-foreground">Account: {selectedEntry.data.paymentInfo.bankAccountNumber}</div>
+                          </div>
+                        )}
+                        {selectedEntry.data.paymentInfo.method === 'venmo' && selectedEntry.data.paymentInfo.venmoHandle && (
+                          <div>
+                            <div className="font-medium">Venmo: @{selectedEntry.data.paymentInfo.venmoHandle}</div>
+                          </div>
+                        )}
+                        {selectedEntry.data.paymentInfo.method === 'paypal' && selectedEntry.data.paymentInfo.paypalInfo && (
+                          <div>
+                            <div className="font-medium">PayPal: {selectedEntry.data.paymentInfo.paypalInfo}</div>
+                          </div>
+                        )}
+                        {selectedEntry.data.paymentInfo.method === 'custom' && selectedEntry.data.paymentInfo.customMethod && (
+                          <div>
+                            <div className="font-medium">{selectedEntry.data.paymentInfo.customMethod}</div>
+                            {selectedEntry.data.paymentInfo.customDetails && (
+                              <div className="text-muted-foreground">{selectedEntry.data.paymentInfo.customDetails}</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Share Actions */}
