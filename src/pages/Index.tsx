@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Receipt, Users, Calculator, Share2, History } from 'lucide-react';
+import { ArrowRight, Receipt, Users, Calculator, Share2, History, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -116,14 +116,19 @@ const Index = () => {
         </motion.div>
 
         {/* Footer Note */}
-        <motion.p
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9 }}
-          className="text-center text-xs text-muted-foreground mt-12"
+          className="text-center space-y-2 mt-12"
         >
-          No accounts • No tracking • Your data stays on your device
-        </motion.p>
+          <p className="text-xs text-muted-foreground">
+            No accounts • No tracking • Your data stays on your device
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Developed by <span className="font-medium text-foreground">Dayana Calamba</span> <Heart className="w-3 h-3 inline mx-1 text-red-500 fill-red-500" />
+          </p>
+        </motion.div>
       </div>
     </div>
   );
